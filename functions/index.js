@@ -10,6 +10,31 @@ admin.initializeApp(functions.config().firebase);
 // initialize the api client
 var apiClient = new docusign.ApiClient();
 
+exports.sendTemplate = functions.https.onRequest((req, res) => {  
+  var integratorKey = credentials.integratorKey,
+    email = credentials.email,
+    password = credentials.password,
+    docusignEnv = 'demo',
+    fullName = req.query.user,
+    recipientEmail = req.query.userEmail,
+    templateId = req.query.templateId,
+    templateRoleName = req.query.templateName;
+
+    var baseUrl = 'https://' + docusignEnv + '.docusign.net/restapi';
+
+    apiClient.setBasePath(baseUrl);
+
+    var creds = JSON.stringify({
+      Username: email,
+      Password: password,
+      IntegratorKey: integratorKey
+    });
+
+  apiClient.addDefaultHeader('X-DocuSign-Authentication', creds);
+
+  docusign.Configuration.default.setDefaultApiClient(apiClient);
+
+  async.waterfall([
 function login (next) {
   // login call available off the AuthenticationApi
   var authApi = new docusign.AuthenticationApi();
@@ -38,7 +63,7 @@ function login (next) {
       next(null, loginAccount);
     }
   });
-}
+},
 function sendTemplate (loginAccount, next) {
   // create a new envelope object that we will manage the signature request through
   var envDef = new docusign.EnvelopeDefinition();
@@ -75,54 +100,13 @@ function sendTemplate (loginAccount, next) {
     console.log('EnvelopeSummary: ' + JSON.stringify(envelopeSummary));
     next(null);
   });
-}
-
-exports.sendTemplate = functions.https.onRequest((req, res) => {
-  // console.log("it's running");
-  // var x = req.body;
-  // console.log(x);
-  console.log(req.query);
-  
-  var integratorKey = credentials.integratorKey,
-    email = credentials.email,
-    password = credentials.password,
-    docusignEnv = 'demo',
-    // fullName = credentials.recipientName,
-    // recipientEmail = credentials.recipientEmail,
-    // templateId = credentials.templateId,
-    // templateRoleName = credentials.templateRoleName;
-
-    fullName = req.query.user,
-    recipientEmail = req.query.userEmail,
-    templateId = req.query.templateId,
-    templateRoleName = req.query.templateName;
-
-    var baseUrl = 'https://' + docusignEnv + '.docusign.net/restapi';
-
-    apiClient.setBasePath(baseUrl);
-
-    // create JSON formatted auth header
-    var creds = JSON.stringify({
-      Username: email,
-      Password: password,
-      IntegratorKey: integratorKey
-    });
-
-  apiClient.addDefaultHeader('X-DocuSign-Authentication', creds);
-
-  // assign api client to the Configuration object
-  docusign.Configuration.default.setDefaultApiClient(apiClient);
-
-  async.waterfall([
-    login,
-    sendTemplate
+},
   ], function end (error) {
     if (error) {
-      console.log('Error: 3232321', error);
+      console.log('Error: ', error);
       process.exit(1);
     }
     process.exit();
   });
-  // res.send("Success");
+  res.send("Success");
 });
-  
